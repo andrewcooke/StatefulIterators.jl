@@ -55,7 +55,8 @@ Closest candidates are:
  in read at /home/andrew/.julia/v0.4/StatefulIterators/src/StatefulIterators.jl:48
 ```
 
-(I have no idea where that specific error originates, but this fails ni general because we only "know" the underlying type for arrays).
+(I have no idea where that specific error originates, but this fails
+in general because we only "know" the underlying type for arrays).
 
 ## Warning
 
