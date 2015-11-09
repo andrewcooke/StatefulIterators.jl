@@ -65,10 +65,6 @@ in general because we only "know" the underlying type for arrays).
 
 ## Warnings
 
-1. This is much less efficient than using normal iterators
+This is much less efficient than using normal iterators
 ([ref](https://groups.google.com/d/msg/julia-users/YJv5o1D_ua0/nGPj2rGOBAAJ)).
 
-2. If you only need stateful iterators (without read), then `chain()`
-   from [Iterators.jl](https://github.com/JuliaLang/Iterators.jl) is
-   probably more useful
-   ([ref](https://groups.google.com/d/msg/julia-users/YJv5o1D_ua0/AhoKZRrLBAAJ)).
