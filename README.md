@@ -5,6 +5,9 @@ A stream-like wrapper around iterable objects.
 
 ## Example
 
+This makes the usual iter-related methods "stateful" - they don't
+"reset" to the start of teh collection on each use:
+
 ```
 julia> using StatefulIterators
 
