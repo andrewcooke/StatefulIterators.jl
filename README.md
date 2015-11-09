@@ -1,7 +1,9 @@
 
 # StatefulIterators
 
-A stream-like wrapper around iterable objects.
+A stream-like wrapper around iterable objects (it's spelt "Stateful"
+with a final trailing lowercase L, and then "Iterators" with a
+leading, uppercase I).
 
 ## Example
 
