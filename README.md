@@ -63,6 +63,12 @@ Closest candidates are:
 (I have no idea where that specific error originates, but this fails
 in general because we only "know" the underlying type for arrays).
 
-## Warning
+## Warnings
 
-This is much less efficient than using normal iterators.
+1. This is much less efficient than using normal iterators
+([ref](https://groups.google.com/d/msg/julia-users/YJv5o1D_ua0/nGPj2rGOBAAJ)).
+
+2. If you only need stateful iterators (without read), then `chain()`
+   from [Iterators.jl](https://github.com/JuliaLang/Iterators.jl) is
+   probably more useful
+   ([ref](https://groups.google.com/d/msg/julia-users/YJv5o1D_ua0/AhoKZRrLBAAJ)).
