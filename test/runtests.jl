@@ -45,6 +45,7 @@ for T in (StatefulIterator, StatefulIterators.IterIterator, Alternative)
         if (T != StatefulIterators.IterIterator)
             @test read(T([0x1,0x2,0x3,0x4,0x5]), UInt16) == 0x0201
             @test read(T([0x1,0x2,0x3,0x4,0x5]), UInt16, 2) == [0x0201, 0x0403]
+            @test read(T(UInt16[0x0201, 0x0403]), UInt8, 4) == [0x1,0x2,0x3,0x4]
         end
     end
 

@@ -60,12 +60,12 @@ function read(s::ArrayIterator, dims...)
     reshape(s.iter[1:n], dims)
 end
 
-function read(s::ArrayIterator, t::Type) 
-    reinterpret(t, read(s, sizeof(t)))[1]
+function read{T,U}(s::ArrayIterator{T}, ::Type{U}) 
+    reinterpret(U, read(s, Int(ceil(sizeof(U) / sizeof(T)))))[1]
 end
 
-function read{T}(s::ArrayIterator, t::Type{T}, dims...)
-    reshape(reinterpret(T, read(s, prod(dims) * sizeof(T))), dims)
+function read{T,U}(s::ArrayIterator{T}, ::Type{U}, dims...)
+    reshape(reinterpret(U, read(s, Int(ceil(prod(dims) * sizeof(U) / sizeof(T))))), dims)
 end
 
 
