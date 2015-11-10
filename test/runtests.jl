@@ -50,3 +50,16 @@ for T in (StatefulIterator, StatefulIterators.IterIterator, Alternative)
     end
 
 end
+
+
+
+# bug in GoCL
+
+e = zeros(UInt8, 7)
+e[1:4] = map(UInt8, collect("goxp"))
+e[5] = 0x00
+e[6:7] = reinterpret(UInt8, UInt16[1000])
+s = StatefulIterator(e)
+@test read(s, 4) == map(UInt8, collect("goxp"))
+@test read(s) == 0x00
+@test read(s, UInt16) == 1000

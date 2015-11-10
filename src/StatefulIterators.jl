@@ -57,7 +57,7 @@ end
 function read(s::ArrayIterator, dims...)
     n = prod(dims)
     i, s.state = s.state, s.state+n
-    reshape(s.iter[1:n], dims)
+    reshape(s.iter[i:i+n-1], dims)
 end
 
 function read{T,U}(s::ArrayIterator{T}, ::Type{U}) 
