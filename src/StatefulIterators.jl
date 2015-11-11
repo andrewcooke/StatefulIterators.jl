@@ -1,7 +1,7 @@
 
 module StatefulIterators
 
-export StatefulIterator
+export StatefulIterator, ArrayIterator, peek
 
 import Base: start, next, done, read, copy
 
@@ -32,6 +32,7 @@ end
 
 StatefulIterator(x) = IterIterator(x)
 StatefulIterator{T}(x::Array{T}) = ArrayIterator{T}(x)
+ArrayIterator{T}(x::Array{T}) = ArrayIterator{T}(x)
 
 copy(i::IterIterator) = IterIterator(i)
 copy{T}(a::ArrayIterator{T}) = ArrayIterator{T}(a)
@@ -45,6 +46,7 @@ function next(i::StatefulIterator, s::StatefulIterator)
 end
 
 done(i::StatefulIterator, s::StatefulIterator) = done(i.iter, i.state)
+done(i::StatefulIterator) = done(i, i)
 
 read(s::StatefulIterator) = next(s, s)[1]
 
@@ -57,20 +59,27 @@ function read(s::ArrayIterator)
     i, s.state = s.state, s.state+1
     return s.iter[i]
 end
+peek(s::ArrayIterator) = s.iter[s.state]
 
 function read(s::ArrayIterator, dims...)
     n = prod(dims)
     i, s.state = s.state, s.state+n
     reshape(s.iter[i:i+n-1], dims)
 end
+peek(s::ArrayIterator, dims...) = reshape(s.iter[s.state:s.state+n-1], dims)
 
 function read{T,U}(s::ArrayIterator{T}, ::Type{U}) 
     reinterpret(U, read(s, Int(ceil(sizeof(U) / sizeof(T)))))[1]
+end
+function peek{T,U}(s::ArrayIterator{T}, ::Type{U})
+    reinterpret(U, peek(s, Int(ceil(sizeof(U) / sizeof(T)))))[1]
 end
 
 function read{T,U}(s::ArrayIterator{T}, ::Type{U}, dims...)
     reshape(reinterpret(U, read(s, Int(ceil(prod(dims) * sizeof(U) / sizeof(T))))), dims)
 end
-
+function peek{T,U}(s::ArrayIterator{T}, ::Type{U}, dims...)
+    reshape(reinterpret(U, peek(s, Int(ceil(prod(dims) * sizeof(U) / sizeof(T))))), dims)
+end
 
 end
