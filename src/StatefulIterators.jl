@@ -3,7 +3,7 @@ module StatefulIterators
 
 export StatefulIterator
 
-import Base: start, next, done, read
+import Base: start, next, done, read, copy
 
 
 abstract StatefulIterator
@@ -13,6 +13,7 @@ type IterIterator <: StatefulIterator
     iter
     state
     IterIterator(iter) = new(iter, start(iter))
+    IterIterator(i::IterIterator) = new(i.iter, i.state)
 end
 
 type ArrayIterator{T} <: StatefulIterator
@@ -25,12 +26,15 @@ type ArrayIterator{T} <: StatefulIterator
         end
         new(a, start(a))
     end
+    ArrayIterator(a::ArrayIterator{T}) = new(a.iter, a.state)
 end
 
 
 StatefulIterator(x) = IterIterator(x)
 StatefulIterator{T}(x::Array{T}) = ArrayIterator{T}(x)
 
+copy(i::IterIterator) = IterIterator(i)
+copy{T}(a::ArrayIterator{T}) = ArrayIterator{T}(a)
 
 start(i::StatefulIterator) = i
 
