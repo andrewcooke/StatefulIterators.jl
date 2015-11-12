@@ -1,3 +1,7 @@
+[![Build
+Status](https://travis-ci.org/andrewcooke/StatefulIterators.jl.png)](https://travis-ci.org/andrewcooke/StatefulIterators.jl)
+[![Coverage Status](https://coveralls.io/repos/andrewcooke/StatefulIterators.jl/badge.svg)](https://coveralls.io/r/andrewcooke/StatefulIterators.jl)
+[![StatefulIterators](http://pkg.julialang.org/badges/StatefulIterators_release.svg)](http://pkg.julialang.org/?pkg=StatefulIterators&ver=release)
 
 # StatefulIterators
 
