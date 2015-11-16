@@ -1,7 +1,7 @@
 
 module StatefulIterators
 
-export StatefulIterator, ArrayIterator, peek
+export StatefulIterator, ArrayIterator, peek, available
 
 import Base: start, next, done, read, copy
 
@@ -81,5 +81,7 @@ end
 function peek{T,U}(s::ArrayIterator{T}, ::Type{U}, dims...)
     reshape(reinterpret(U, peek(s, Int(ceil(prod(dims) * sizeof(U) / sizeof(T))))), dims)
 end
+
+available(s::ArrayIterator) = length(s.iter) - s.state + 1
 
 end
