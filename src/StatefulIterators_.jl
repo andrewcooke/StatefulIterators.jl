@@ -21,19 +21,10 @@ function next{T,S}(s::StatefulIterator{T,S}, ::StatefulIterator{T,S})
 end
 done(s::StatefulIterator) = done(s.iter, s.state)
 done{T,S}(s::StatefulIterator{T,S}, ::StatefulIterator{T,S}) = done(s)
-# start(s::StatefulIterator) = start(s.iter)
-# function next{T,S}(s::StatefulIterator{T,S}, ::Int)
-#     (item, s.state) = next(s.iter, s.state)
-#     return item, s.state
-# end
-# done(s::StatefulIterator) = done(s.iter, s.state)
-# done{T,S}(s::StatefulIterator{T,S}, ::Int) = done(s.iter, s.state)
 
-
-# read{T,S}(s::StatefulIterator{T,S}) = next(s, s)[1] # does not work for tasks
 function read(s::StatefulIterator)
     for v in s
-        return v
+        return v  # just return the first value
     end
 end
 
@@ -50,10 +41,10 @@ function read(s::StatefulIterator, dims::Int...)
             return a
         end
     end
-    return a[1:i] # Should possibly be an error. Asked for too many elements.
+    return resize!(a, i) # Should possibly be an error. Asked for too many elements.
 end
 
-peek{T, S<:Void}(s::StatefulIterator{T,S}) = nothing # or throw exception?
+peek{T, S<:Void}(s::StatefulIterator{T,S}, dims::Int...) = nothing # or throw exception?
 # throw(ErrorException("peek() is not supported for iterators with state of type $(S)."))
 peek{T, S}(s::StatefulIterator{T,S}) = next(s.iter, s.state)[1]
 function peek{T, S}(s::StatefulIterator{T,S}, dims::Int...)
@@ -63,7 +54,8 @@ function peek{T, S}(s::StatefulIterator{T,S}, dims::Int...)
     return a
 end
 
-available{T<:Base.Cycle, S}(::StatefulIterator{T, S}) = Inf
+available{T<:Base.Cycle, S}(::StatefulIterator{T, S}) = Inf  # cycles are never finished
+available{T, S<:Void}(::StatefulIterator{T, S}) = nothing  # This is the case for tasks
 @generated function available{T, S}(s::StatefulIterator{T,S})
     # Returns the number of remaining bytes in stream.
     if isbits(eltype(T)) && method_exists(length, Tuple{T}) && S <: Integer
@@ -75,8 +67,6 @@ available{T<:Base.Cycle, S}(::StatefulIterator{T, S}) = Inf
             return :(done(s.iter, s.state) ? 0 : 
                 (length(s.iter) - findfirst(s.iter, s.state) + 1) * sizeof(eltype(T)))
         end
-    elseif S <: Void # this is the case for tasks for example
-        return nothing
     end
     # fallback algorithm
     return quote
