@@ -196,25 +196,19 @@ end
 
 # --- optimisations for known tyoes
 
-available{T<:Union{Array, LinSpace, UnitRange, ASCIIString},S}(s::StatefulIterator{T,S}) = length(s.iter) - s.state + 1
+typealias LinearIndexed Union{Array, LinSpace, UnitRange, ASCIIString}
 
-function available{T<:UnitRange,S}(s::StatefulIterator{T,S})
-    if eltype(T) <: Integer
-        s.iter.stop - s.state + 1
-    else
-        invoke(available, (StatefulIterator{Any,Any},), s)
-    end
-end
+available{T<:LinearIndexed,S<:Integer}(s::StatefulIterator{T,S}) = length(s.iter) - s.state + 1
 
-function available{T<:StepRange,S}(s::StatefulIterator{T,S})
-    if eltype(T) <: Integer && typeof(s.iter.step) <: Integer
-        fld(s.iter.stop - s.state, s.iter.step) + 1
-    else
-        invoke(available, (StatefulIterator{Any,Any},), s)
-    end
-end
+available{T<:UnitRange,S<:Integer}(s::StatefulIterator{T,S}) = s.iter.stop - s.state + 1
 
-# TODO - skip and seek too
+available{T<:StepRange,S<:Integer}(s::StatefulIterator{T,S}) = fld(s.iter.stop - s.state, s.iter.step) + 1
+
+skip{T<:LinearIndexed,S<:Integer}(s::StatefulIterator{T,S}, offset) = s.state += offset
+
+skip{T<:UnitRange,S<:Integer}(s::StatefulIterator{T,S}, offset) = s.state += offset
+
+skip{T<:StepRange,S<:Integer}(s::StatefulIterator{T,S}, offset) = s.state += offset * s.iter.step
 
 
 # --- avoid known bad types

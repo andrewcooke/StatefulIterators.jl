@@ -93,6 +93,14 @@ suite_123(() -> Any[1,2,3]; bits=false)
 # chunking to larger bitlengths
 @test read(StatefulIterator([0x01, 0x00, 0x00, 0x00]), UInt32) == one(UInt32)
 
+# strange step size
+@test available(StatefulIterator(1:2:7)) == length(collect(1:2:7))
+for iter in ([1,2,3], 1:3, 1:2:7)
+    s = StatefulIterator(iter)
+    skip(s, 1)
+    @test collect(s) == collect(iter)[2:end]
+end
+
 # bug in GoCL
 e = zeros(UInt8, 7)
 e[1:4] = map(UInt8, collect("goxp"))
