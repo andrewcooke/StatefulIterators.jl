@@ -82,7 +82,11 @@ function suite_123(make_iter; explicit=true, bits=true)
     @test size(read(StatefulIterator(make_iter()), 2, 1)) == (2, 1)
 
     s = StatefulIterator(make_iter())
-    a = Vector(Int, 2)
+    if bits
+        a = zeros(Int, 2)
+    else
+        a = Any[0, 0]
+    end
     read!(s, a)
     @test a == [1, 2]
     

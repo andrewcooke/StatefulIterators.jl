@@ -82,8 +82,10 @@ past the end of the collection.  the error is EOFError to be
 consistent with streams."""
 read(s::StatefulIterator) = (assertNotDone(s); next(s)[1])
 
-function read!{T,S,U}(s::StatefulIterator, a::Array{U})
-    if U in (Any, T)
+compatible(U, T) = U == Any || eltype(T) <: U
+
+function read!{T,S,U}(s::StatefulIterator{T,S}, a::Array{U})
+    if compatible(U, T)
         n = length(a)
         @limited_loop s i n x begin
             @inbounds a[i] = x
@@ -143,7 +145,7 @@ function read(s::StatefulIterator, dims::Int...)
 end
 
 function read{T,S,U}(s::StatefulIterator{T,S}, ::Type{U})
-    if U in (Any, eltype(T))
+    if compatible(U, T)
         read(s)
     else
         n = cld(sizeof(U), sizeof(eltype(T)))
@@ -152,7 +154,7 @@ function read{T,S,U}(s::StatefulIterator{T,S}, ::Type{U})
 end
 
 function read{T,S,U}(s::StatefulIterator{T,S}, ::Type{U}, dims...)
-    if U in (Any, eltype(T))
+    if compatible(U, T)
         read(s, dims...)
     else
         m = prod(dims)
@@ -180,7 +182,7 @@ function peek(s::StatefulIterator, t::Type, dims...)
 end
 
 function available{T,S,U}(s::StatefulIterator{T,S}, ::Type{U})
-    if U in (Any, eltype(T))
+    if compatible(U, T)
         available(s)
     else
         t, u = sizeof(eltype(T)), sizeof(U)
@@ -189,7 +191,7 @@ function available{T,S,U}(s::StatefulIterator{T,S}, ::Type{U})
 end
 
 function skip{T,S,U}(s::StatefulIterator{T,S}, ::Type{U}, offset)
-    if U in (Any, eltype(T))
+    if compatible(U, T)
         skip(s, offset)
     else
         t, u = sizeof(eltype(T)), sizeof(U)
