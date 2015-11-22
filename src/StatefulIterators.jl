@@ -3,7 +3,7 @@ module StatefulIterators
 
 export StatefulIterator, ArrayIterator, peek, available, reset!
 
-import Base: start, next, done, read, position, seek, seekstart,
+import Base: start, next, done, read, read!, position, seek, seekstart,
              seekend, skip, eof, copy, eltype
 
 
@@ -81,6 +81,21 @@ it should be used with done() or you will get an error when reading
 past the end of the collection.  the error is EOFError to be
 consistent with streams."""
 read(s::StatefulIterator) = (assertNotDone(s); next(s)[1])
+
+function read!{T,S,U}(s::StatefulIterator, a::Array{U})
+    if U in (Any, T)
+        n = length(a)
+        @limited_loop s i n x begin
+            @inbounds a[i] = x
+        end
+    else
+        b = reinterpret(T, a)
+        n = length(b)
+        @limited_loop s i n x begin
+            @inbounds b[i] = x
+        end        
+    end
+end
 
 """the next() value, without advancing the state.  similar to next(),
 it should be used with done() or you will get an error when reading
