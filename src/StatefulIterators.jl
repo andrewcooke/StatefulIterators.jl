@@ -1,87 +1,208 @@
 
 module StatefulIterators
 
-export StatefulIterator, ArrayIterator, peek, available
+export StatefulIterator, ArrayIterator, peek, available, reset!
 
-import Base: start, next, done, read, copy
-
-
-abstract StatefulIterator
+import Base: start, next, done, read, position, seek, seekstart,
+             seekend, skip, eof, copy, eltype
 
 
-type IterIterator <: StatefulIterator
-    iter
-    state
-    IterIterator(iter) = new(iter, start(iter))
-    IterIterator(i::IterIterator) = new(i.iter, i.state)
+# --- the type + basic operations
+
+type StatefulIterator{T,S}
+    iter::T
+    state::S
 end
 
-type ArrayIterator{T} <: StatefulIterator
-    iter::Vector{T}
-    state
-    function ArrayIterator(a::Array{T})
-        s = size(a)
-        if length(s) > 1
-            a = reshape(a, prod(s))
+StatefulIterator(iter) = StatefulIterator(iter, start(iter))
+StatefulIterator(s::StatefulIterator) = StatefulIterator(s.iter, s.state)
+
+copy(s::StatefulIterator) = StatefulIterator(s)
+
+eltype{T,S}(::StatefulIterator{T,S}) = eltype(T) 
+
+macro unlimited_loop(s, i, x, block)
+    quote
+        $(esc(i)) = 0
+        for $(esc(x)) in $(esc(s))
+            $(esc(i)) += 1
+            $(esc(block))
         end
-        new(a, start(a))
     end
-    ArrayIterator(a::ArrayIterator{T}) = new(a.iter, a.state)
+end
+
+macro limited_loop(s, i, n, x, block)
+    quote
+        $(esc(i)) = 0
+        if $(esc(n)) > 0
+            for $(esc(x)) in $(esc(s))
+                $(esc(i)) += 1
+                $(esc(block))
+                $(esc(i)) > $(esc(n)) && break
+            end
+            $(esc(i)) < $(esc(n)) && throw(EOFError())
+        end
+    end
+end
+
+macro preserving_state(s, block)
+    quote
+        save = $(esc(s)).state
+        try
+            $(esc(block))
+        finally
+            $(esc(s)).state = save
+        end
+    end
 end
 
 
-StatefulIterator(x) = IterIterator(x)
-StatefulIterator{T}(x::Array{T}) = ArrayIterator{T}(x)
-ArrayIterator{T}(x::Array{T}) = ArrayIterator{T}(x)
+# --- iter protocol
 
-copy(i::IterIterator) = IterIterator(i)
-copy{T}(a::ArrayIterator{T}) = ArrayIterator{T}(a)
+start(s::StatefulIterator) = s
 
-start(i::StatefulIterator) = i
-
-function next(i::StatefulIterator, s::StatefulIterator)
-    item, state = next(i.iter, i.state)
-    i.state = state
-    item, i
+next{T,S}(s::StatefulIterator{T,S}, ::StatefulIterator{T,S}) = next(s)
+function next(s::StatefulIterator)
+    item, s.state = next(s.iter, s.state)
+    item, s
 end
 
-done(i::StatefulIterator, s::StatefulIterator) = done(i.iter, i.state)
-done(i::StatefulIterator) = done(i, i)
+done(s::StatefulIterator, ::StatefulIterator) = done(s)
+done(s::StatefulIterator) = done(s.iter, s.state)
 
-read(s::StatefulIterator) = next(s, s)[1]
 
-function read(s::StatefulIterator, dims...)
-    reshape(collect(take(s, prod(dims))), dims)
+
+# --- basic stream-like extensions
+
+assertNotDone(s::StatefulIterator) = done(s) && throw(EOFError())
+
+"""read is like next() but returns only the value.  similar to next(),
+it should be used with done() or you will get an error when reading
+past the end of the collection.  the error is EOFError to be
+consistent with streams."""
+read(s::StatefulIterator) = (assertNotDone(s); next(s)[1])
+
+"""the next() value, without advancing the state.  similar to next(),
+it should be used with done() or you will get an error when reading
+past the end of the collection."""
+peek(s::StatefulIterator) = (assertNotDone(s); next(s.iter, s.state)[1])
+
+position(s::StatefulIterator) = s.state
+
+seek{T,S}(s::StatefulIterator{T,S}, p::T) = s.state = p
+
+seekstart(s::StatefulIterator) = s.state = start(s.iter)
+
+function seekend(s::StatefulIterator)
+    @unlimited_loop s i _ begin end
+    i
 end
 
-
-function read(s::ArrayIterator)
-    i, s.state = s.state, s.state+1
-    return s.iter[i]
+function available(s::StatefulIterator)
+    @preserving_state s begin
+        seekend(s)
+    end
 end
-peek(s::ArrayIterator) = s.iter[s.state]
 
-function read(s::ArrayIterator, dims...)
+function skip(s::StatefulIterator, offset)
+    @limited_loop s i offset x begin end
+end
+
+# we do not support mark / unmark / reset
+
+eof(s::StatefulIterator) = done(s)
+
+# TODO - support serialize / deserialize
+
+
+# --- arbitrary types and arrays of data
+
+function read(s::StatefulIterator, dims::Int...)
+    a = Array(eltype(s), dims)
     n = prod(dims)
-    i, s.state = s.state, s.state+n
-    reshape(s.iter[i:i+n-1], dims)
-end
-peek(s::ArrayIterator, dims...) = reshape(s.iter[s.state:s.state+n-1], dims)
-
-function read{T,U}(s::ArrayIterator{T}, ::Type{U}) 
-    reinterpret(U, read(s, Int(ceil(sizeof(U) / sizeof(T)))))[1]
-end
-function peek{T,U}(s::ArrayIterator{T}, ::Type{U})
-    reinterpret(U, peek(s, Int(ceil(sizeof(U) / sizeof(T)))))[1]
+    @limited_loop s i n x begin
+        @inbounds a[i] = x
+    end
+    a
 end
 
-function read{T,U}(s::ArrayIterator{T}, ::Type{U}, dims...)
-    reshape(reinterpret(U, read(s, Int(ceil(prod(dims) * sizeof(U) / sizeof(T))))), dims)
-end
-function peek{T,U}(s::ArrayIterator{T}, ::Type{U}, dims...)
-    reshape(reinterpret(U, peek(s, Int(ceil(prod(dims) * sizeof(U) / sizeof(T))))), dims)
+function read{T,S,U}(s::StatefulIterator{T,S}, ::Type{U})
+    if U in (Any, eltype(T))
+        read(s)
+    else
+        n = cld(sizeof(U), sizeof(eltype(T)))
+        reinterpret(U, read(s, n))[1]
+    end
 end
 
-available(s::ArrayIterator) = length(s.iter) - s.state + 1
+function read{T,S,U}(s::StatefulIterator{T,S}, ::Type{U}, dims...)
+    if U in (Any, eltype(T))
+        read(s, dims...)
+    else
+        m = prod(dims)
+        n = cld(m * sizeof(U), sizeof(eltype(T)))
+        reshape(resize!(reinterpret(U, read(s, n)), m), dims)
+    end
+end
+
+function peek(s::StatefulIterator, dims::Int...)
+    @preserving_state s begin
+        read(s, dims...)
+    end
+end
+
+function peek(s::StatefulIterator, t::Type)
+    @preserving_state s begin
+        read(s, t)
+    end
+end
+
+function read(s::StatefulIterator, t::Type, dims...)
+    @preserving_state s begin
+        read(s, t, dims...)
+    end
+end
+
+function seekend{T,S,U}(s::StatefulIterator{T,S}, ::Type{U})
+    if U in (Any, eltype(T))
+        seekend(s)
+    else
+        # pre-calculate to get error on non bits types before changing
+        # state
+        t, u = sizeof(eltype(T)), sizeof(U)
+        fld(seekend(s) * t, u)
+    end
+end
+
+function available(s::StatefulIterator, t::Type)
+    @preserving_state s begin
+        seekend(s, t)
+    end
+end
+
+function skip{T,S,U}(s::StatefulIterator{T,S}, ::Type{U}, offset)
+    if U in (Any, eltype(T))
+        skip(s, offset)
+    else
+        skip(s, offset * cld(sizeof(U), sizeof(eltype(T))))
+    end
+end
+
+
+# --- optimiations for known tyoes
+
+
+
+
+# --- avoid known bad types
+
+# we cannot peek iters that are themselves stateful (because the state
+# is not actually a separate state).
+for X in (Task, StatefulIterator)
+    msg = "$X lacks explicit state"
+    @eval peek{T<:$X,S}(s::StatefulIterator{T,S}, args...) = error($msg)
+    @eval available{T<:$X,S}(s::StatefulIterator{T,S}, args...) = error($msg)
+end
+
 
 end
