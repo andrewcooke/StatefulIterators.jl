@@ -95,13 +95,13 @@ seekstart(s::StatefulIterator) = s.state = start(s.iter)
 
 function seekend(s::StatefulIterator)
     @unlimited_loop s i _ begin end
-    i
 end
 
 """the number of read() values remaining."""
 function available(s::StatefulIterator)
     @preserving_state s begin
-        seekend(s)
+        @unlimited_loop s i _ begin end
+        i
     end
 end
 
@@ -164,17 +164,6 @@ function peek(s::StatefulIterator, t::Type, dims...)
     end
 end
 
-function seekend{T,S,U}(s::StatefulIterator{T,S}, ::Type{U})
-    if U in (Any, eltype(T))
-        seekend(s)
-    else
-        # pre-calculate to get error on non bits types before changing
-        # state
-        t, u = sizeof(eltype(T)), sizeof(U)
-        fld(seekend(s) * t, u)
-    end
-end
-
 function available{T,S,U}(s::StatefulIterator{T,S}, ::Type{U})
     if U in (Any, eltype(T))
         available(s)
@@ -198,6 +187,12 @@ end
 
 typealias LinearIndexed Union{Array, LinSpace, UnitRange, ASCIIString}
 
+seekend{T<:LinearIndexed,S<:Integer}(s::StatefulIterator{T,S}) = s.state = length(s.iter) + 1
+
+seekend{T<:UnitRange,S<:Integer}(s::StatefulIterator{T,S}) = s.state = s.iter.stop + 1
+
+seekend{T<:StepRange,S<:Integer}(s::StatefulIterator{T,S}) = s.state = s.iter.start + s.iter.step * (fld(s.iter.stop - s.iter.start, s.iter.step) + 1)
+
 available{T<:LinearIndexed,S<:Integer}(s::StatefulIterator{T,S}) = length(s.iter) - s.state + 1
 
 available{T<:UnitRange,S<:Integer}(s::StatefulIterator{T,S}) = s.iter.stop - s.state + 1
@@ -209,6 +204,10 @@ skip{T<:LinearIndexed,S<:Integer}(s::StatefulIterator{T,S}, offset) = s.state +=
 skip{T<:UnitRange,S<:Integer}(s::StatefulIterator{T,S}, offset) = s.state += offset
 
 skip{T<:StepRange,S<:Integer}(s::StatefulIterator{T,S}, offset) = s.state += offset * s.iter.step
+
+# we don't need to add the versions with an explicit type - like
+# skip(s, type, offset) - because the implementations earlier will
+# delegate to these optimized versions.
 
 
 # --- avoid known bad types

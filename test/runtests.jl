@@ -95,10 +95,12 @@ suite_123(() -> Any[1,2,3]; bits=false)
 
 # strange step size
 @test available(StatefulIterator(1:2:7)) == length(collect(1:2:7))
-for iter in ([1,2,3], 1:3, 1:2:7)
+for iter in ([1,2,3], 1:3, 1:2:7, 1:1:3, 1:2:6, 1:2:7, 2:2:3, 2:2:4)
     s = StatefulIterator(iter)
     skip(s, 1)
     @test collect(s) == collect(iter)[2:end]
+    seekend(s)
+    @test done(s)
 end
 
 # bug in GoCL
