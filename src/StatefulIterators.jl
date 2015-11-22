@@ -98,6 +98,7 @@ function seekend(s::StatefulIterator)
     i
 end
 
+"""the number of read() values remaining."""
 function available(s::StatefulIterator)
     @preserving_state s begin
         seekend(s)
@@ -174,12 +175,6 @@ function seekend{T,S,U}(s::StatefulIterator{T,S}, ::Type{U})
     end
 end
 
-function available(s::StatefulIterator, t::Type)
-    @preserving_state s begin
-        seekend(s, t)
-    end
-end
-
 function skip{T,S,U}(s::StatefulIterator{T,S}, ::Type{U}, offset)
     if U in (Any, eltype(T))
         skip(s, offset)
@@ -189,8 +184,25 @@ function skip{T,S,U}(s::StatefulIterator{T,S}, ::Type{U}, offset)
 end
 
 
-# --- optimiations for known tyoes
+# --- optimisations for known tyoes
 
+available{T<:Union{Array, LinSpace, UnitRange, ASCIIString},S}(s::StatefulIterator{T,S}) = length(s.iter) - s.state + 1
+
+function available{T<:UnitRange,S}(s::StatefulIterator{T,S})
+    if eltype(T) <: Integer
+        s.iter.stop - s.state + 1
+    else
+        invoke(available, (StatefulIterator{Any,Any},), s)
+    end
+end
+
+function available{T<:StepRange,S}(s::StatefulIterator{T,S})
+    if eltype(T) <: Integer && typeof(s.iter.step) <: Integer
+        fld(s.iter.stop - s.state, s.iter.step) + 1
+    else
+        invoke(available, (StatefulIterator{Any,Any},), s)
+    end
+end
 
 
 
