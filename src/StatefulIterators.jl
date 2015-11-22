@@ -38,7 +38,7 @@ macro limited_loop(s, i, n, x, block)
             for $(esc(x)) in $(esc(s))
                 $(esc(i)) += 1
                 $(esc(block))
-                $(esc(i)) > $(esc(n)) && break
+                $(esc(i)) >= $(esc(n)) && break
             end
             $(esc(i)) < $(esc(n)) && throw(EOFError())
         end
@@ -89,7 +89,7 @@ peek(s::StatefulIterator) = (assertNotDone(s); next(s.iter, s.state)[1])
 
 position(s::StatefulIterator) = s.state
 
-seek{T,S}(s::StatefulIterator{T,S}, p::T) = s.state = p
+seek{T,S}(s::StatefulIterator{T,S}, p::S) = s.state = p
 
 seekstart(s::StatefulIterator) = s.state = start(s.iter)
 
@@ -158,7 +158,7 @@ function peek(s::StatefulIterator, t::Type)
     end
 end
 
-function read(s::StatefulIterator, t::Type, dims...)
+function peek(s::StatefulIterator, t::Type, dims...)
     @preserving_state s begin
         read(s, t, dims...)
     end
@@ -175,11 +175,21 @@ function seekend{T,S,U}(s::StatefulIterator{T,S}, ::Type{U})
     end
 end
 
+function available{T,S,U}(s::StatefulIterator{T,S}, ::Type{U})
+    if U in (Any, eltype(T))
+        available(s)
+    else
+        t, u = sizeof(eltype(T)), sizeof(U)
+        fld(available(s) * t, u)
+    end
+end
+
 function skip{T,S,U}(s::StatefulIterator{T,S}, ::Type{U}, offset)
     if U in (Any, eltype(T))
         skip(s, offset)
     else
-        skip(s, offset * cld(sizeof(U), sizeof(eltype(T))))
+        t, u = sizeof(eltype(T)), sizeof(U)
+        skip(s, offset * cld(u, t))
     end
 end
 
@@ -204,6 +214,7 @@ function available{T<:StepRange,S}(s::StatefulIterator{T,S})
     end
 end
 
+# TODO - skip and seek too
 
 
 # --- avoid known bad types
@@ -212,7 +223,11 @@ end
 # is not actually a separate state).
 for X in (Task, StatefulIterator)
     msg = "$X lacks explicit state"
+    @eval copy{T<:$X,S}(s::StatefulIterator{T,S}) = error($msg)
     @eval peek{T<:$X,S}(s::StatefulIterator{T,S}, args...) = error($msg)
+    @eval position{T<:$X,S}(s::StatefulIterator{T,S}) = error($msg)
+    @eval seek{T<:$X,S}(s::StatefulIterator{T,S}, p) = error($msg)
+    @eval seekstart{T<:$X,S}(s::StatefulIterator{T,S}) = error($msg)
     @eval available{T<:$X,S}(s::StatefulIterator{T,S}, args...) = error($msg)
 end
 
