@@ -89,7 +89,13 @@ function suite_123(make_iter; explicit=true, bits=true)
     end
     read!(s, a)
     @test a == [1, 2]
-    
+
+    if bits
+        s = StatefulIterator(make_iter())
+        a = zeros(UInt8, 2)
+        read!(s, a)
+        @test a == [0x01, 0x00]
+    end    
     println("ok")
 end
 
