@@ -72,3 +72,7 @@ in general because we only "know" the underlying type for arrays).
 This is much less efficient than using normal iterators
 ([ref](https://groups.google.com/d/msg/julia-users/YJv5o1D_ua0/nGPj2rGOBAAJ)).
 
+## Credits
+
+Thanks to [okvs](https://github.com/okvs) for a more efficient data
+structure, a more efficient inner loop, and various other good ideas.
