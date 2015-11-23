@@ -58,7 +58,8 @@ Unlike Julia's `IOStream`, stateful iterators have an underlying type,
 given by `eltype(s)`.  This affects the behaviour of various methods
 as follows:
 
-* **default type for read(s, dims...)** is the underlying type, nt `UInt8`.
+* **default type for read(s, dims...)** and similar methods is the
+    underlying type, not `UInt8`.
 
 * **iterator chunking** is on the underlying type.
 
@@ -88,9 +89,10 @@ from a *single* `UInt16`.
 ## Explicit State
 
 Not all iterables follow the "spirit" of the iter interface - the most
-common is `Task`.  These types do not have a state that can be saved
-and restored, and so some methods (`copy()`, `peek()`, `position()`,
-`seek()`, `seekstart()`, and `available()`) are not supported:
+common exception is `Task`.  These types do not have a state that can
+be saved and restored, and so some methods - `copy()`, `peek()`,
+`position()`, `seek()`, `seekstart()`, and `available()` - are not
+supported:
 
 ```
 julia> s = StatefulIterator(Task(() -> (for i in 1:3; produce(i); end)))
