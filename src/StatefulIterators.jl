@@ -5,7 +5,8 @@ export StatefulIterator, ArrayIterator, peek, available, reset!
 
 import Base: start, next, done, read, read!, readbytes, 
              position, seek, seekstart, seekend, skip, 
-             eof, copy, eltype
+             eof, copy, eltype,
+             readuntil, readline
 
 
 # --- the type + basic operations
@@ -248,7 +249,7 @@ function skip{T,S,U}(s::StatefulIterator{T,S}, ::Type{U}, offset)
 end
 
 
-# --- optimisations for known tyoes
+# --- optimisations for known types
 
 typealias LinearIndexed Union{Array, LinSpace, UnitRange, ASCIIString}
 
@@ -288,6 +289,40 @@ for X in (Task, StatefulIterator)
     @eval seekstart{T<:$X,S}(s::StatefulIterator{T,S}) = error($msg)
     @eval available{T<:$X,S}(s::StatefulIterator{T,S}, args...) = error($msg)
 end
+
+
+# --- text-specific routines
+
+# julia-0.4/base/io.jl
+function readuntil{T<:AbstractString,S}(s::StatefulIterator{T,S}, t::AbstractString)
+    l = length(t)
+    if l == 0
+        return ""
+    elseif l > 40
+        warn("readuntil(SteatfulIterator,AbstractString) will perform poorly with a long string")
+    end
+    out = IOBuffer()
+    m = Array(Char, l)  # last part of stream to match
+    t = collect(t)
+    i = 0
+    while !eof(s)
+        i += 1
+        c = read(s, Char)
+        write(out, c)
+        if i <= l
+            m[i] = c
+        else
+            m[1:l-1] = m[2:l]
+            m[l] = c
+        end
+        if i >= l && m == t
+            break
+        end
+    end
+    return takebuf_string(out)
+end
+
+readline{T<:AbstractString,S}(s::StatefulIterator{T,S}) = readuntil(s, "\n")
 
 
 end

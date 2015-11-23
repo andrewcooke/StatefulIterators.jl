@@ -6,11 +6,12 @@
 
 # StatefulIterators
 
-Typed, stream-like, iterables for Julia.
+Typed, stream-like iterables for Julia.
 
 The following stream-like commands are supported: **read()**,
 **read!()**, **readbytes()**, **readbytes!()**, **position()**,
-**skip()**, **seek()**, **seekstart()**, **seekend()**, **eof()**.
+**skip()**, **seek()**, **seekstart()**, **seekend()**, **eof()**,
+**readuntil()** and **readline()**.
 
 In addition, **available()** and **peek()** have been added.
 
@@ -60,7 +61,7 @@ given by `eltype(s)`.  This affects the behaviour of various methods
 as follows:
 
 * **default type for read(s, dims...)** and similar methods is the
-    underlying type, not `UInt8`.
+    underlying type.
 
 * **iterator chunking** is on the underlying type.
 
@@ -127,6 +128,14 @@ ERROR: argument is an abstract type; size is indeterminate
  in read at /home/andrew/.julia/v0.4/StatefulIterators/src/StatefulIterators.jl:199
 ```
 
+## State Is Not (Always) An Offset
+
+The value returned by `position()` and taken by `seek()` is the
+state of the corresponding iterable.  It may not be an integer.
+
+The function `skip()`, however, does take an integer.  This is the
+number of instances of the underlying type (not necessarily bytes) to
+move over.
 
 ## Warnings
 

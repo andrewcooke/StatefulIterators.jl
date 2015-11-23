@@ -139,6 +139,10 @@ s = StatefulIterator(e)
 @test read(s) == 0x00
 @test read(s, UInt16) == 1000
 
+# text only
+s = StatefulIterator("hello\nworld\n")
+@test readline(s) == "hello\n"
+
 function suite_speed(make_iter, target)
     s = make_iter()
     println(typeof(s))
