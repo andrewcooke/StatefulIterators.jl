@@ -85,17 +85,28 @@ read(s::StatefulIterator) = (assertNotDone(s); next(s)[1])
 compatible(U, T) = U == Any || eltype(T) <: U
 
 function read!{T,S,U}(s::StatefulIterator{T,S}, a::Array{U})
+    n = length(a)
     if compatible(U, T)
-        n = length(a)
         @limited_loop s i n x begin
             @inbounds a[i] = x
         end
     else
-        b = reinterpret(T, a)
-        n = length(b)
-        @limited_loop s i n x begin
+        b = reinterpret(eltype(T), a)
+        m = length(b)
+        @limited_loop s i m x begin
             @inbounds b[i] = x
-        end        
+        end
+        t, u = sizeof(eltype(T)), sizeof(U)
+        if t > u
+            # need to fill in the Us that didn't cover an entire eltype(T)
+            nn = fld(m * t, u)
+            if n > nn
+                c = read(s, U, n-nn)
+                for i in 1:(n-nn)
+                    a[nn+i] = c[i]
+                end
+            end
+        end
     end
 end
 
