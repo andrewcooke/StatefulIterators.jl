@@ -1,7 +1,8 @@
-[![Build
-Status](https://travis-ci.org/andrewcooke/StatefulIterators.jl.png)](https://travis-ci.org/andrewcooke/StatefulIterators.jl)
+[![Build Status](https://travis-ci.org/andrewcooke/StatefulIterators.jl.png)](https://travis-ci.org/andrewcooke/StatefulIterators.jl)
 [![Coverage Status](https://coveralls.io/repos/andrewcooke/StatefulIterators.jl/badge.svg)](https://coveralls.io/r/andrewcooke/StatefulIterators.jl)
-[![StatefulIterators](http://pkg.julialang.org/badges/StatefulIterators_release.svg)](http://pkg.julialang.org/?pkg=StatefulIterators&ver=release)
+
+[![StatefulIterators](http://pkg.julialang.org/badges/StatefulIterators_0.4.svg)](http://pkg.julialang.org/?pkg=StatefulIterators&ver=0.4)
+
 
 # StatefulIterators
 
@@ -131,6 +132,9 @@ ERROR: argument is an abstract type; size is indeterminate
 
 This is less efficient than using normal iterators
 ([ref](https://groups.google.com/d/msg/julia-users/YJv5o1D_ua0/nGPj2rGOBAAJ)).
+A simple summation (using `sum()`) of 1 million elements is about
+twice as slow when using a stateful iterator, compared to using a bare
+array (but allocates no more memory).
 
 ## Credits
 

@@ -138,3 +138,15 @@ s = StatefulIterator(e)
 @test read(s, 4) == map(UInt8, collect("goxp"))
 @test read(s) == 0x00
 @test read(s, UInt16) == 1000
+
+function suite_speed(make_iter, target)
+    s = make_iter()
+    println(typeof(s))
+    n = sum(s)
+    @test n == target
+    s = make_iter()
+    @time sum(s)
+end
+
+suite_speed(() -> ones(Int, Int(1e6)), 1e6)
+suite_speed(() -> StatefulIterator(ones(Int, Int(1e6))), 1e6)
