@@ -96,9 +96,15 @@ function suite_123(make_iter; explicit=true, bits=true)
         read!(s, a)
         @test a == [0x01, 0x00]
         s = StatefulIterator(make_iter())
+        a = readbytes(s, 2)
+        @test a == [0x01, 0x00]
+        s = StatefulIterator(make_iter())
         a = zeros(UInt32, 3)
         read!(s, a)
         @test a == [0x00000001,0x00000000,0x00000002]
+        s = StatefulIterator(make_iter())
+        a = readbytes(s, 10)
+        @test a == [0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x02,0x00]
     end
 
     println("ok")

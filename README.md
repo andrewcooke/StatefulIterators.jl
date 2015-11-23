@@ -5,71 +5,129 @@ Status](https://travis-ci.org/andrewcooke/StatefulIterators.jl.png)](https://tra
 
 # StatefulIterators
 
-A stream-like wrapper around iterable objects (it's spelt "Stateful"
-with a trailing lowercase L, and then "Iterators" with a leading,
-uppercase I).
+Typed, stream-like, iterables for Julia.
+
+The following stream-like commands are supported: **read()**,
+**read!()**, **readbytes()**, **readbytes!()**, **position()**,
+**skip()**, **seek()**, **seekstart()**, **seekend()**, **eof()**.
+
+In addition, **available()** and **peek()** have been added.
 
 ## Example
-
-This makes the usual iter-related methods "stateful" - they don't
-"reset" to the start of the collection on each use:
 
 ```
 julia> using StatefulIterators
 
 julia> s = StatefulIterator([1,2,3,4,5])
-StatefulIterators.ArrayIterator{Int64}([1,2,3,4,5],1)
+StatefulIterators.StatefulIterator{Array{Int64,1},Int64}([1,2,3,4,5],1)
 
-julia> collect(take(s, 3))
-3-element Array{Any,1}:
+julia> collect(take(s, 2))
+2-element Array{Any,1}:
  1
  2
- 3
 
-julia> collect(take(s, 3))
-2-element Array{Any,1}:
- 4
- 5
+julia> eltype(s)
+Int64
+
+julia> read(s)
+3
+
+julia> readbytes(s)
+16-element Array{UInt8,1}:
+ 0x04
+ 0x00
+ 0x00
+ 0x00
+ 0x00
+ 0x00
+ 0x00
+ 0x00
+ 0x05
+ 0x00
+ 0x00
+ 0x00
+ 0x00
+ 0x00
+ 0x00
+ 0x00
 ```
 
-## Read Methods
+## Types
 
-The iterators also support read methods similar to streams.
+Unlike Julia's `IOStream`, stateful iterators have an underlying type,
+given by `eltype(s)`.  This affects the behaviour of various methods
+as follows:
 
-```
-julia> s = StatefulIterator([0x1, 0x2, 0x3, 0x4])
-StatefulIterators.ArrayIterator{UInt8}(UInt8[0x01,0x02,0x03,0x04],1)
+* **default type for read(s, dims...)** is the underlying type, nt `UInt8`.
 
-julia> read(s, Int16, 2)
-2-element Array{Int16,1}:
-  513
- 1027
-```
+* **iterator chunking** is on the underlying type.
 
-Note that type conversion only works for iterators over typed arrays:
+The second point is subtle and affects how types that are smaller than
+the underlying type are read:
 
 ```
-julia> StatefulIterator("abc")
-StatefulIterators.IterIterator("abc",1)
+julia> s = StatefulIterator(Int16[1,2,3])
+StatefulIterators.StatefulIterator{Array{Int16,1},Int64}(Int16[1,2,3],1)
 
-julia> collect(take(StatefulIterator("abc"), 2))
-2-element Array{Any,1}:
- 'a'
- 'b'
+julia> read(s, UInt8, 2)
+2-element Array{UInt8,1}:
+ 0x01
+ 0x00
 
-julia> read(StatefulIterator("abc"), UInt8)
-ERROR: MethodError: `*` has no method matching *(::Type{UInt8})
-Closest candidates are:
-  *(::Any, ::Any, ::Any, ::Any...)
- in read at /home/andrew/.julia/v0.4/StatefulIterators/src/StatefulIterators.jl:48
+julia> read(s, UInt8)
+0x02
+
+julia> read(s, UInt8)
+0x03
 ```
 
-(I have no idea where that specific error originates, but this fails
-in general because we only "know" the underlying type for arrays).
+Note above how the second and third reads start from the next
+`UInt16`.  In comparison, the first read extracts both bytes (`UInt8`)
+from a *single* `UInt16`.
+
+## Explicit State
+
+Not all iterables follow the "spirit" of the iter interface - the most
+common is `Task`.  These types do not have a state that can be saved
+and restored, and so some methods (`copy()`, `peek()`, `position()`,
+`seek()`, `seekstart()`, and `available()`) are not supported:
+
+```
+julia> s = StatefulIterator(Task(() -> (for i in 1:3; produce(i); end)))
+StatefulIterators.StatefulIterator{Task,Void}(Task (runnable) @0x00007f04c42e8fb0,nothing)
+
+julia> read(s)
+1
+
+julia> available(s)
+ERROR: Task lacks explicit state
+ in available at /home/andrew/.julia/v0.4/StatefulIterators/src/StatefulIterators.jl:289
+```
+
+## Bits Types
+
+Methods involving type conversion are only supported when the
+underlying type is a bits type:
+
+```
+julia> s = StatefulIterator([0x01, 0x02])
+StatefulIterators.StatefulIterator{Array{UInt8,1},Int64}(UInt8[0x01,0x02],1)
+
+julia> read(s, UInt16)
+0x0201
+
+julia> s = StatefulIterator([0x01, "hello world"])
+StatefulIterators.StatefulIterator{Array{Any,1},Int64}(Any[0x01,"hello world"],1)
+
+julia> read(s, UInt16)
+ERROR: argument is an abstract type; size is indeterminate
+ in read at /home/andrew/.julia/v0.4/StatefulIterators/src/StatefulIterators.jl:199
+```
+
 
 ## Warnings
 
-This is much less efficient than using normal iterators
+This is less efficient than using normal iterators
 ([ref](https://groups.google.com/d/msg/julia-users/YJv5o1D_ua0/nGPj2rGOBAAJ)).
 
 ## Credits

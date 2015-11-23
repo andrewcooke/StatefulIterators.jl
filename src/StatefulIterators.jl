@@ -3,8 +3,9 @@ module StatefulIterators
 
 export StatefulIterator, ArrayIterator, peek, available, reset!
 
-import Base: start, next, done, read, read!, position, seek, seekstart,
-             seekend, skip, eof, copy, eltype
+import Base: start, next, done, read, read!, readbytes, 
+             position, seek, seekstart, seekend, skip, 
+             eof, copy, eltype
 
 
 # --- the type + basic operations
@@ -104,6 +105,42 @@ function read!{T,S,U}(s::StatefulIterator{T,S}, a::Array{U})
                 c = read(s, U, n-nn)
                 for i in 1:(n-nn)
                     a[nn+i] = c[i]
+                end
+            end
+        end
+    end
+end
+
+function readbytes(s::StatefulIterator, nb=typemax(Int))
+    b = Array(UInt8, 0)
+    readbytes!(s, b, nb)
+    b
+end
+
+function readbytes!{T,S}(s::StatefulIterator{T,S}, b::Array{UInt8}, nb=tyemax(Int))
+    try
+        n = min(nb, available(s, UInt8))
+        if length(b) < n
+            resize!(b, n)
+        end
+        a = reinterpret(eltype(T), a)
+        m = length(a)
+        @limited_loop s i m x begin
+            @inbounds a[i] = x
+        end
+    catch  # available failed
+        t = sizeof(eltype(T))
+        i, a = 0, Array(UInt8, t)
+        while !done(s) && i < nb
+            read!(s, a)
+            j = 0
+            while i < nb && j < t
+                i += 1
+                j += 1
+                if i > length(b)
+                    push!(b, a[j])
+                else
+                    b[i] = a[j]
                 end
             end
         end
