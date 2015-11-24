@@ -107,6 +107,16 @@ function suite_123(make_iter; explicit=true, bits=true)
         @test a == [0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x02,0x00]
     end
 
+    for n in 2:5
+        s = StatefulIterator(make_iter())
+        if n <= 3
+            skip(s, n)
+            @test done(s) == (n == 3)
+        else
+            @test_throws EOFError skip(s, n)
+        end
+    end
+
     println("ok")
 end
 

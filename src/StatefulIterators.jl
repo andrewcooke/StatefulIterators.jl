@@ -257,7 +257,9 @@ seekend{T<:LinearIndexed,S<:Integer}(s::StatefulIterator{T,S}) = s.state = lengt
 
 seekend{T<:UnitRange,S<:Integer}(s::StatefulIterator{T,S}) = s.state = s.iter.stop + 1
 
-seekend{T<:StepRange,S<:Integer}(s::StatefulIterator{T,S}) = s.state = s.iter.start + s.iter.step * (fld(s.iter.stop - s.iter.start, s.iter.step) + 1)
+endof(r::StepRange) = r.start + r.step * (fld(r.stop - r.start, r.step) + 1)
+
+seekend{T<:StepRange,S<:Integer}(s::StatefulIterator{T,S}) = s.state = endof(s.iter)
 
 available{T<:LinearIndexed,S<:Integer}(s::StatefulIterator{T,S}) = length(s.iter) - s.state + 1
 
@@ -265,11 +267,13 @@ available{T<:UnitRange,S<:Integer}(s::StatefulIterator{T,S}) = s.iter.stop - s.s
 
 available{T<:StepRange,S<:Integer}(s::StatefulIterator{T,S}) = fld(s.iter.stop - s.state, s.iter.step) + 1
 
-skip{T<:LinearIndexed,S<:Integer}(s::StatefulIterator{T,S}, offset) = s.state += offset
+limit(n, lim) = n > lim ? throw(EOFError()) : n
 
-skip{T<:UnitRange,S<:Integer}(s::StatefulIterator{T,S}, offset) = s.state += offset
+skip{T<:LinearIndexed,S<:Integer}(s::StatefulIterator{T,S}, offset) = s.state = limit(s.state + offset, length(s.iter) + 1)
 
-skip{T<:StepRange,S<:Integer}(s::StatefulIterator{T,S}, offset) = s.state += offset * s.iter.step
+skip{T<:UnitRange,S<:Integer}(s::StatefulIterator{T,S}, offset) = s.state = limit(s.state + offset, s.iter.stop + 1)
+
+skip{T<:StepRange,S<:Integer}(s::StatefulIterator{T,S}, offset) = s.state = limit(s.state + offset * s.iter.step, endof(s.iter))
 
 # we don't need to add the versions with an explicit type - like
 # skip(s, type, offset) - because the implementations earlier will
