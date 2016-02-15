@@ -2,7 +2,7 @@
 [![Coverage Status](https://coveralls.io/repos/andrewcooke/StatefulIterators.jl/badge.svg)](https://coveralls.io/r/andrewcooke/StatefulIterators.jl)
 
 [![StatefulIterators](http://pkg.julialang.org/badges/StatefulIterators_0.4.svg)](http://pkg.julialang.org/?pkg=StatefulIterators&ver=0.4)
-[![StatefulIterators](http://pkg.julialang.org/badges/StatefulIterators_.5.svg)](http://pkg.julialang.org/?pkg=StatefulIterators&ver=.5)
+[![StatefulIterators](http://pkg.julialang.org/badges/StatefulIterators_0.5.svg)](http://pkg.julialang.org/?pkg=StatefulIterators&ver=0.5)
 
 
 # StatefulIterators
